@@ -1,19 +1,4 @@
-# Lakehouse-1
-```markdown
 # Практическая №1 — Lakehouse на TPC-H, вариант Q18 «Large Volume Customer»
-
-## Содержание
-
-1. [Вариант и масштаб](#1-вариант-и-масштаб)
-2. [Поднятые сервисы](#2-поднятые-сервисы)
-3. [Разбор запроса Q18](#3-разбор-запроса-q18)
-4. [Медальон](#4-медальон)
-5. [Тесты производительности](#5-тесты-производительности)
-6. [Часть 2](#6-часть-2)
-7. [Выводы](#7-выводы)
-8. [Структура репозитория](#структура-репозитория)
-
----
 
 ## 1. Вариант и масштаб
 
@@ -247,7 +232,7 @@ SELECT * FROM iceberg.silver.big_order_customers LIMIT 5;
 ## Структура репозитория
 
 ```
-├── README.md                   — этот отчёт
+├── отчет.md                    — этот отчёт
 ├── docker-compose.yml          — стек: SeaweedFS, PostgreSQL, Lakekeeper, Trino, Superset
 ├── create_warehouse.sh         — создание warehouse в Lakekeeper
 ├── trino/catalog/              — конфиги каталогов Trino (iceberg, tpch)
@@ -256,47 +241,3 @@ SELECT * FROM iceberg.silver.big_order_customers LIMIT 5;
 ├── sql/                        — SQL по слоям: bronze, silver, gold, benchmark
 └── screenshots/                — скриншоты (docker ps, SeaweedFS, результаты, time travel, Superset)
 ```
-```
-
-## Как загрузить на GitHub
-
-**Если репозиторий уже создан** и вы в папке проекта:
-
-```bash
-git init
-git add README.md
-git commit -m "Практическая №1: отчёт по Lakehouse (TPC-H Q18)"
-git branch -M main
-git remote add origin https://github.com/<ваш-username>/<название-репо>.git
-git push -u origin main
-```
-
-**Если хотите залить весь проект** (compose, SQL, Dockerfile, скриншоты):
-
-```bash
-git init
-cat > .gitignore <<'EOF'
-# Docker
-*.log
-data/
-.venv/
-__pycache__/
-
-# Локальные конфиги
-.env
-*.local
-
-# macOS
-.DS_Store
-EOF
-
-git add .
-git commit -m "Практическая №1: Lakehouse на TPC-H, вариант Q18"
-git branch -M main
-git remote add origin https://github.com/<ваш-username>/<название-репо>.git
-git push -u origin main
-```
-
-**Если GitHub попросит пароль** — используйте Personal Access Token (Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token с правами `repo`).
-
-Содержимое выше — это готовый `README.md` для репозитория.
