@@ -1,0 +1,84 @@
+services:
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: lakehouse-s3
+    command: >-
+      server
+      -dir=/data
+      -s3
+      -s3.config=/etc/seaweedfs/s3.json
+      -s3.port=8333
+      -ip.bind=0.0.0.0
+      -master.volumeSizeLimitMB=1024
+    ports:
+      - "8333:8333"
+      - "9333:9333"
+      - "8888:8888"
+    volumes:
+      - ./seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+      - s3-data:/data
+
+  s3-init:               # создаёт бакет lakehouse
+    image: amazon/aws-cli:latest
+    depends_on: [seaweedfs]
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: admin12345
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: /bin/sh
+    command: -c "sleep 15; aws --endpoint-url http://seaweedfs:8333 s3 mb s3://lakehouse; exit 0"
+
+  postgres:
+    image: postgres:16
+    container_name: lakehouse-pg
+    environment:
+      POSTGRES_USER: lk
+      POSTGRES_PASSWORD: lk
+      POSTGRES_DB: lakekeeper
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lk -d lakekeeper"]
+      interval: 3s
+      retries: 20
+    volumes: [pg-data:/var/lib/postgresql/data]
+
+  lakekeeper-migrate:
+    image: quay.io/lakekeeper/catalog:latest-main
+    command: ["migrate"]
+    environment: &lk-env
+      LAKEKEEPER__PG_DATABASE_URL_READ: postgresql://lk:lk@postgres:5432/lakekeeper
+      LAKEKEEPER__PG_DATABASE_URL_WRITE: postgresql://lk:lk@postgres:5432/lakekeeper
+      LAKEKEEPER__PG_ENCRYPTION_KEY: change-me-to-any-long-secret
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  lakekeeper:
+    image: quay.io/lakekeeper/catalog:latest-main
+    container_name: lakekeeper
+    command: ["serve"]
+    environment: *lk-env
+    ports: ["8181:8181"]
+    depends_on:
+      lakekeeper-migrate: {condition: service_completed_successfully}
+
+  trino:
+    image: trinodb/trino:latest
+    container_name: trino
+    ports: ["8080:8080"]
+    volumes: ["./trino/catalog:/etc/trino/catalog"]
+    depends_on: [lakekeeper, s3-init]
+
+  superset:              # п. 6.2 (запускать после основного стека)
+    build: ./superset
+    container_name: superset
+    ports: ["8088:8088"]
+    environment:
+      SUPERSET_SECRET_KEY: change-me-superset
+    profiles: ["bi"]
+    command: >
+      /bin/sh -c "superset db upgrade &&
+      superset fab create-admin --username admin --firstname a --lastname a --email a@a.a --password admin;
+      superset init && superset run -h 0.0.0.0 -p 8088"
+
+volumes:
+  s3-data:
+  pg-data:
